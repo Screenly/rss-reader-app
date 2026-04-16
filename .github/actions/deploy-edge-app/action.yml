@@ -1,0 +1,57 @@
+---
+# TODO: Move this to a separate reusable GitHub Actions repository.
+# This action should accept a Screenly API token as an input so it can
+# be reused across multiple Edge App repositories and accounts.
+name: Deploy Edge App
+description: Builds (optional) and deploys a Screenly Edge App
+
+inputs:
+  screenly_api_token:
+    description: Screenly API token
+    required: true
+
+  app_path:
+    description: Path to the Edge App directory
+    required: true
+    default: '.'
+
+  build_system:
+    description: Build system to use (vanilla or bun)
+    required: true
+    default: vanilla
+
+  deploy_from_dist:
+    description: Deploy from the dist folder
+    required: true
+    default: 'true'
+
+  delete_missing_settings:
+    description: Delete missing settings on deploy
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: 🛠 Install Bun
+      if: ${{ inputs.build_system == 'bun' }}
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: 1.2.2
+
+    - name: 🛠 Build
+      if: ${{ inputs.build_system == 'bun' }}
+      shell: bash
+      working-directory: ${{ inputs.app_path }}
+      run: |
+        bun install
+        bun run build
+
+    - name: 🚀 Deploy Edge App
+      uses: screenly/cli@master
+      with:
+        screenly_api_token: ${{ inputs.screenly_api_token }}
+        cli_commands: >-
+          edge-app deploy
+          --path="${{ inputs.build_system == 'bun' && inputs.deploy_from_dist == 'true' && format('{0}/dist', inputs.app_path) || inputs.app_path }}"
+          --delete-missing-settings=${{ inputs.delete_missing_settings }}

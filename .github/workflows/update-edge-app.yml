@@ -1,0 +1,62 @@
+---
+name: Update Edge App
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to update edge app (stage or production)"
+        required: true
+        default: "stage"
+        type: choice
+        options:
+          - stage
+          - production
+
+      delete_missing_settings:
+        description: "Delete missing settings"
+        default: false
+        type: boolean
+
+      build_system:
+        description: "Build system for the Edge App"
+        required: true
+        default: "bun"
+        type: choice
+        options:
+          - vanilla
+          - bun
+
+      deploy_from_dist:
+        description: "Deploy from the dist folder. If unchecked, deploy from app's root folder."
+        required: true
+        default: true
+        type: boolean
+
+run-name: Updating RSS Reader in ${{ inputs.environment }}
+
+jobs:
+  deploy:
+    name: Updating RSS Reader in ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    environment: ${{ inputs.environment }}
+    env:
+      API_BASE_URL: ${{ inputs.environment == 'stage' && 'https://api.screenlyappstage.com' || 'https://api.screenlyapp.com' }}
+      SCREENLY_API_TOKEN: ${{ secrets.SCREENLY_API_TOKEN }}
+      MANIFEST_FILE_NAME: ${{ inputs.environment == 'stage' && 'screenly_qc.yml' || 'screenly.yml' }}
+
+    steps:
+      - name: ⬇️  Checkout master branch
+        uses: actions/checkout@v6
+        with:
+          ref: master
+
+      - name: 🚀 Deploy Edge App
+        uses: ./.github/actions/deploy-edge-app
+        with:
+          screenly_api_token: ${{ env.SCREENLY_API_TOKEN }}
+          app_path: '.'
+          build_system: ${{ inputs.build_system }}
+          deploy_from_dist: ${{ inputs.deploy_from_dist }}
+          delete_missing_settings: ${{ inputs.delete_missing_settings }}
