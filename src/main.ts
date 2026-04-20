@@ -13,6 +13,7 @@ import {
 import { loadCache, saveCache, stripHtml, type RssEntry } from './utils'
 
 const MAX_ENTRIES = 6
+const UNUSED_VARIABLE = 'this will fail linting'
 
 async function fetchFeed(
   rssUrl: string,
