@@ -1,4 +1,4 @@
-import './css/style.css'
+import './css/style.css'  
 import '@screenly/edge-apps/components'
 import { parseFeed } from '@rowanmanning/feed-parser'
 import {
