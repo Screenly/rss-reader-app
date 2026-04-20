@@ -1,0 +1,13 @@
+name: Checks
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Screenly/edge-apps-actions/checks@main
