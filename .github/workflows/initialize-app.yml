@@ -1,0 +1,38 @@
+---
+name: Initialize Edge App
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment for initialization
+        required: true
+        default: stage
+        type: choice
+        options:
+          - stage
+          - production
+      edge_app_name:
+        description: Edge App name (used for the CLI --name flag)
+        required: true
+        type: string
+      edge_app_title:
+        description: Display title for the Edge App instance
+        required: true
+        type: string
+
+run-name: Initializing ${{ inputs.edge_app_name }} in ${{ inputs.environment }}
+
+jobs:
+  initialize:
+    name: Initializing ${{ inputs.edge_app_name }} in ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: Screenly/edge-apps-actions/initialize@add-initialize-action
+        with:
+          screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN }}
+          edge_app_name: ${{ inputs.edge_app_name }}
+          edge_app_title: ${{ inputs.edge_app_title }}
+          environment: ${{ inputs.environment }}
