@@ -2,61 +2,35 @@
 name: Update Edge App
 
 on:
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: "Environment to update edge app (stage or production)"
-        required: true
-        default: "stage"
-        type: choice
-        options:
-          - stage
-          - production
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
 
-      delete_missing_settings:
-        description: "Delete missing settings"
-        default: false
-        type: boolean
-
-      build_system:
-        description: "Build system for the Edge App"
-        required: true
-        default: "bun"
-        type: choice
-        options:
-          - vanilla
-          - bun
-
-      deploy_from_dist:
-        description: "Deploy from the dist folder. If unchecked, deploy from app's root folder."
-        required: true
-        default: true
-        type: boolean
-
-run-name: Updating RSS Reader in ${{ inputs.environment }}
+run-name: Updating RSS Reader in ${{ startsWith(github.ref, 'refs/tags/v') && 'production' || 'stage' }}
 
 jobs:
-  deploy:
-    name: Updating RSS Reader in ${{ inputs.environment }}
+  deploy-stage:
+    name: Updating RSS Reader in stage
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
-    environment: ${{ inputs.environment }}
-    env:
-      API_BASE_URL: ${{ inputs.environment == 'stage' && 'https://api.screenlyappstage.com' || 'https://api.screenlyapp.com' }}
-      SCREENLY_API_TOKEN: ${{ secrets.SCREENLY_API_TOKEN }}
-      MANIFEST_FILE_NAME: ${{ inputs.environment == 'stage' && 'screenly_qc.yml' || 'screenly.yml' }}
-
+    if: github.ref == 'refs/heads/main'
+    environment: stage
     steps:
-      - name: ⬇️  Checkout master branch
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
+      - uses: Screenly/edge-apps-actions/update@v1
         with:
-          ref: master
+          screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN }}
+          environment: stage
 
-      - name: 🚀 Deploy Edge App
-        uses: ./.github/actions/deploy-edge-app
+  deploy-production:
+    name: Updating RSS Reader in production
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    environment: production
+    steps:
+      - uses: actions/checkout@v6
+      - uses: Screenly/edge-apps-actions/update@v1
         with:
-          screenly_api_token: ${{ env.SCREENLY_API_TOKEN }}
-          app_path: '.'
-          build_system: ${{ inputs.build_system }}
-          deploy_from_dist: ${{ inputs.deploy_from_dist }}
-          delete_missing_settings: ${{ inputs.delete_missing_settings }}
+          screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN }}
+          environment: production
