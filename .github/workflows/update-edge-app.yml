@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - feat/refactor-update-edge-app-workflow
     tags:
       - 'v*'
 
@@ -18,19 +19,19 @@ jobs:
     environment: stage
     steps:
       - uses: actions/checkout@v4
-      - uses: Screenly/edge-apps-actions/update@v1
+      - uses: Screenly/edge-apps-actions/update@add-update-action
         with:
-          screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN }}
+          screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN_TEST }}
           environment: stage
 
   deploy-production:
     name: Updating RSS Reader in production
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.ref == 'refs/heads/feat/refactor-update-edge-app-workflow'
     environment: production
     steps:
       - uses: actions/checkout@v4
-      - uses: Screenly/edge-apps-actions/update@v1
+      - uses: Screenly/edge-apps-actions/update@add-update-action
         with:
-          screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN }}
+          screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN_TEST }}
           environment: production

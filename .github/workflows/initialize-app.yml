@@ -30,11 +30,9 @@ jobs:
     environment: ${{ inputs.environment }}
     steps:
       - uses: actions/checkout@v6
+      - uses: Screenly/edge-apps-actions/initialize@add-update-action
         with:
-          ref: main
-      - uses: Screenly/edge-apps-actions/initialize@v1
-        with:
-          screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN }}
+          screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN_TEST }}
           edge_app_name: ${{ inputs.edge_app_name }}
           edge_app_title: ${{ inputs.edge_app_title }}
           environment: ${{ inputs.environment }}
