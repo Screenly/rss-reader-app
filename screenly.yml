@@ -1,6 +1,5 @@
 ---
 syntax: manifest_v1
-id: 01KPTS135WKPE8ADFNPFHQS6ER
 description: Screenly RSS Reader App
 icon: https://playground.srly.io/edge-apps/rss-reader/static/img/icon.svg
 author: Screenly, Inc.
