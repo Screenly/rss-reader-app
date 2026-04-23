@@ -2,8 +2,7 @@ version: 2
 
 updates:
   - package-ecosystem: 'bun'
-    directories:
-      - '/'
+    directory: '/'
     schedule:
       interval: 'monthly'
     groups:
