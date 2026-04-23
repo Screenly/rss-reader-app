@@ -1,0 +1,21 @@
+version: 2
+
+updates:
+  - package-ecosystem: 'bun'
+    directories:
+      - '/'
+    schedule:
+      interval: 'monthly'
+    groups:
+      bun:
+        patterns:
+          - '*'
+
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'monthly'
+    groups:
+      github-actions:
+        patterns:
+          - '*'
