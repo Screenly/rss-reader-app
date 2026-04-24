@@ -32,7 +32,7 @@ body {
   overflow: hidden;
   color: var(--text-primary);
   font-family: 'Inter', system-ui, sans-serif;
-  background: url('/static/img/bg.webp') no-repeat center center;
+  background: url('/static/images/bg.webp') no-repeat center center;
   background-size: cover;
 }
 
