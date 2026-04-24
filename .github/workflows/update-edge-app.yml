@@ -22,6 +22,7 @@ jobs:
         with:
           screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN }}
           environment: stage
+          delete_missing_settings: 'true'
 
   deploy-production:
     name: Updating RSS Reader in production
@@ -34,3 +35,4 @@ jobs:
         with:
           screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN }}
           environment: production
+          delete_missing_settings: 'true'
