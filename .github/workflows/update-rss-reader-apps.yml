@@ -170,7 +170,7 @@ jobs:
         uses: screenly/cli@master
         with:
           screenly_api_token: ${{ env.SCREENLY_API_TOKEN }}
-          cli_commands: edge-app deploy --path="./dist"
+          cli_commands: edge-app deploy --path="./dist" --delete-missing-settings=true
 
   summary:
     name: Deployment Summary
