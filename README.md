@@ -6,9 +6,13 @@ Displays the latest entries from any RSS feed on your Screenly digital signage s
 
 ## Getting Started
 
-This repository uses a git submodule for Claude AI configuration. See the
-[edge-apps-claude-config README](https://github.com/Screenly/edge-apps-claude-config#usage)
-for cloning instructions.
+This repository uses a git submodule for Claude AI configuration. Clone it with:
+
+```bash
+gh repo clone Screenly/rss-reader-app -- --recurse-submodules
+```
+
+Then install dependencies:
 
 ```bash
 bun install
