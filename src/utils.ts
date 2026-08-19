@@ -4,12 +4,24 @@ export interface RssEntry {
   title: string
   content: string
   formattedDate: string
+  imageUrl: string
   source: string
 }
 
 interface AppCache {
   entries: RssEntry[]
   timestamp: number
+}
+
+const LONG_TITLE_CHARS = 70
+const VERY_LONG_TITLE_CHARS = 130
+
+// News titles vary wildly in length; a long one steps down in size instead
+// of wrapping the lead story off the canvas
+export function getTitleSizeClass(title: string): string {
+  if (title.length > VERY_LONG_TITLE_CHARS) return 'is-very-long'
+  if (title.length > LONG_TITLE_CHARS) return 'is-long'
+  return ''
 }
 
 export function stripHtml(html: string): string {

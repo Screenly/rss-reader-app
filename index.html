@@ -12,28 +12,25 @@
       reference-height="1080"
       orientation="auto"
     >
-      <div id="app">
-        <app-header class="header" show-date></app-header>
-
-        <template id="feed-card-template">
-          <article class="feed-card">
-            <div class="feed-card-meta">
-              <h2 class="feed-card-title"></h2>
-              <time class="feed-card-date"></time>
-            </div>
-            <p class="feed-card-excerpt"></p>
-            <span class="feed-card-source"></span>
-          </article>
-        </template>
-
-        <p id="feed-date" class="feed-date"></p>
-
-        <main id="feed-grid" class="feed-grid" hidden></main>
-
-        <div id="feed-error" class="feed-error" hidden>
-          <p>Unable to load RSS feed.<br />Retrying&hellip;</p>
+      <main class="news">
+        <header class="news-header">
+          <img class="news-logo" data-logo alt="" />
+          <p class="news-source" data-source></p>
+          <p class="news-date" data-date></p>
+        </header>
+        <div class="news-body" data-body hidden>
+          <section class="news-hero">
+            <img class="news-hero-image is-hidden" data-hero-image alt="" />
+            <p class="news-hero-date" data-hero-date></p>
+            <h1 class="news-hero-title" data-hero-title></h1>
+            <p class="news-hero-excerpt" data-hero-excerpt></p>
+          </section>
+          <ul class="news-list" data-list></ul>
         </div>
-      </div>
+        <p class="news-error" data-error hidden>
+          Unable to load the feed.<br />Retrying&hellip;
+        </p>
+      </main>
     </auto-scaler>
     <script type="module" src="/src/main.ts"></script>
   </body>
