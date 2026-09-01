@@ -1,12 +1,9 @@
 import { test } from '@playwright/test'
 import {
+  captureScreenshot,
   createMockScreenlyForScreenshots,
-  getScreenshotsDir,
   RESOLUTIONS,
-  setupClockMock,
-  setupScreenlyJsMock,
 } from '@screenly/edge-apps/test/screenshots'
-import path from 'path'
 
 const RSS_URL = 'http://feeds.bbci.co.uk/news/rss.xml'
 
@@ -68,30 +65,20 @@ const { screenlyJsContent } = createMockScreenlyForScreenshots(
 
 for (const { width, height } of RESOLUTIONS) {
   test(`screenshot ${width}x${height}`, async ({ browser }) => {
-    const screenshotsDir = getScreenshotsDir()
-
-    const context = await browser.newContext({ viewport: { width, height } })
-    const page = await context.newPage()
-
-    await setupClockMock(page)
-    await setupScreenlyJsMock(page, screenlyJsContent)
-
-    await page.route(RSS_URL, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/rss+xml',
-        body: MOCK_RSS_XML,
-      })
+    await captureScreenshot(browser, {
+      width,
+      height,
+      filenamePrefix: 'rss-reader-app',
+      screenlyJsContent,
+      setupMocks: async (page) => {
+        await page.route(RSS_URL, async (route) => {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/rss+xml',
+            body: MOCK_RSS_XML,
+          })
+        })
+      },
     })
-
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
-
-    await page.screenshot({
-      path: path.join(screenshotsDir, `${width}x${height}.png`),
-      fullPage: false,
-    })
-
-    await context.close()
   })
 }
