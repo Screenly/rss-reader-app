@@ -18,11 +18,12 @@ jobs:
     environment: stage
     steps:
       - uses: actions/checkout@v6
-      - uses: Screenly/edge-apps-actions/update@v1
+      - uses: Screenly/edge-apps-actions/update@f4ccd2bd50db5fb0a5147d287ac03cafe552d29b
         with:
           screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN }}
           environment: stage
           delete_missing_settings: 'true'
+          edge_app_id: ${{ secrets.EDGE_APP_ID || vars.STAGE_EDGE_APP_ID }}
 
   deploy-production:
     name: Updating RSS Reader in production
@@ -31,8 +32,9 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v6
-      - uses: Screenly/edge-apps-actions/update@v1
+      - uses: Screenly/edge-apps-actions/update@f4ccd2bd50db5fb0a5147d287ac03cafe552d29b
         with:
           screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN }}
           environment: production
           delete_missing_settings: 'true'
+          edge_app_id: ${{ secrets.EDGE_APP_ID || vars.PRODUCTION_EDGE_APP_ID }}
