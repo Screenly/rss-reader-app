@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: main
-      - uses: Screenly/edge-apps-actions/initialize@f4ccd2bd50db5fb0a5147d287ac03cafe552d29b
+      - uses: Screenly/edge-apps-actions/initialize@v26.9.0
         with:
           screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN }}
           edge_app_name: ${{ inputs.edge_app_name }}
