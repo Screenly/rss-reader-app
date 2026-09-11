@@ -53,7 +53,7 @@ jobs:
       manifest_file_name: ${{ steps.set-env.outputs.manifest_file_name }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set environment
         id: set-env
@@ -116,7 +116,7 @@ jobs:
       SCREENLY_API_TOKEN: ${{ secrets.SCREENLY_API_TOKEN }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup yq
         uses: ./.github/actions/setup-yq
