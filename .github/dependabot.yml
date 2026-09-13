@@ -9,6 +9,15 @@ updates:
       bun:
         patterns:
           - '*'
+    ignore:
+      # typescript-eslint, pulled in by the shared ESLint config in @screenly/edge-apps,
+      # declares a peer range of `typescript >=4.8.4 <6.1.0`. No released version supports
+      # TypeScript 7, so `bun run lint` dies with
+      #   TypeError: Cannot read properties of undefined (reading 'Cjs')
+      # in @typescript-eslint/typescript-estree. Drop this entry once typescript-eslint
+      # ships TypeScript 7 support.
+      - dependency-name: 'typescript'
+        versions: ['>=7']
 
   - package-ecosystem: 'github-actions'
     directory: '/'
