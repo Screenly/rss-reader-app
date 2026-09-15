@@ -6,31 +6,55 @@
     <title>RSS Reader - Screenly Edge App</title>
     <script src="screenly.js?version=1"></script>
   </head>
-  <body>
+  <body
+    class="text-white bg-[url('/static/images/bg.webp')] bg-no-repeat bg-center bg-cover before:content-[''] before:fixed before:inset-0 before:z-[var(--z-index-backdrop)] before:pointer-events-none before:bg-black/20 before:backdrop-blur-[3px]"
+  >
     <auto-scaler
       reference-width="1920"
       reference-height="1080"
       orientation="auto"
+      class="relative z-[var(--z-index-content)]"
     >
-      <div id="app">
+      <div id="app" class="flex flex-col w-full h-full">
         <app-header class="header" show-date></app-header>
 
         <template id="feed-card-template">
-          <article class="feed-card">
-            <div class="feed-card-meta">
-              <h2 class="feed-card-title"></h2>
-              <time class="feed-card-date"></time>
+          <article
+            class="feed-card flex flex-col gap-5 p-6 bg-[linear-gradient(90deg,rgba(0,0,0,0.4)_0%,rgba(0,0,0,0.4)_100%),linear-gradient(142deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.02)_100%)] border-[0.75px] border-white/10 rounded-[1.667rem] backdrop-blur-[10px] overflow-hidden shadow-[inset_0_0.75px_0_rgba(255,255,255,0.15),inset_0_-0.75px_0_rgba(255,255,255,0.05)] portrait:gap-10 portrait:p-[3.25rem] portrait:[&:nth-child(n+4)]:hidden"
+          >
+            <div class="feed-card-meta flex flex-col gap-1.5">
+              <h2
+                class="feed-card-title m-0 text-[1.458rem] font-bold leading-[1.929rem] text-white line-clamp-2 portrait:text-[2rem] portrait:leading-[2.625rem]"
+              ></h2>
+              <time
+                class="feed-card-date mt-2 text-[1.042rem] font-normal leading-[1.563rem] text-white/80 whitespace-nowrap portrait:mt-3 portrait:text-2xl portrait:leading-8"
+              ></time>
             </div>
-            <p class="feed-card-excerpt"></p>
-            <span class="feed-card-source"></span>
+            <p
+              class="feed-card-excerpt flex-1 m-0 text-[1.042rem] font-medium leading-[1.563rem] text-white line-clamp-4 portrait:text-2xl portrait:leading-8 portrait:line-clamp-3"
+            ></p>
+            <span
+              class="feed-card-source text-[0.833rem] font-semibold leading-5 text-white/80 tracking-[0.08em] uppercase portrait:text-lg portrait:leading-6"
+            ></span>
           </article>
         </template>
 
-        <p id="feed-date" class="feed-date"></p>
+        <p
+          id="feed-date"
+          class="feed-date m-0 pt-[5.25rem] px-40 text-[2.344rem] font-normal leading-[3.073rem] text-white text-center text-shadow whitespace-nowrap portrait:pt-40 portrait:px-10 portrait:text-[5.625rem] portrait:leading-[7.375rem] portrait:whitespace-normal"
+        ></p>
 
-        <main id="feed-grid" class="feed-grid" hidden></main>
+        <main
+          id="feed-grid"
+          class="feed-grid flex-1 grid grid-cols-3 gap-5 pt-[3.75rem] px-40 pb-[7.5rem] overflow-hidden [&[hidden]]:hidden portrait:flex-initial portrait:mt-auto portrait:grid-cols-1 portrait:auto-rows-fr portrait:content-start portrait:px-10 portrait:pt-[3.75rem] portrait:pb-[7.5rem]"
+          hidden
+        ></main>
 
-        <div id="feed-error" class="feed-error" hidden>
+        <div
+          id="feed-error"
+          class="feed-error flex-1 flex items-center justify-center pb-[10%] text-2xl leading-[3rem] text-white/80 text-center [&[hidden]]:hidden"
+          hidden
+        >
           <p>Unable to load RSS feed.<br />Retrying&hellip;</p>
         </div>
       </div>
