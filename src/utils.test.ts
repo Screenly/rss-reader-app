@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach } from 'bun:test'
-import { stripHtml, loadCache, saveCache } from './utils'
+import { getTitleSizeClass, stripHtml, loadCache, saveCache } from './utils'
 import type { RssEntry } from './utils'
 
 const localStorageMock = (() => {
@@ -23,12 +23,14 @@ const ENTRIES: RssEntry[] = [
     source: 'BBC News',
     content: 'Content 1',
     formattedDate: 'Mon, Dec 8, 2025',
+    imageUrl: 'https://example.com/image-1.jpg',
   },
   {
     title: 'Title 2',
     source: 'BBC News',
     content: 'Content 2',
     formattedDate: 'Mon, Dec 8, 2025',
+    imageUrl: '',
   },
 ]
 
@@ -73,5 +75,24 @@ describe('loadCache / saveCache', () => {
   test('returns empty array for malformed cache', () => {
     localStorage.setItem('rssStore', 'not-json')
     expect(loadCache()).toEqual([])
+  })
+})
+
+describe('getTitleSizeClass', () => {
+  test('returns no class for a short title', () => {
+    expect(getTitleSizeClass('Markets rally')).toBe('')
+  })
+
+  test('returns is-long past 70 characters', () => {
+    expect(getTitleSizeClass('a'.repeat(71))).toBe('is-long')
+  })
+
+  test('returns is-very-long past 130 characters', () => {
+    expect(getTitleSizeClass('a'.repeat(131))).toBe('is-very-long')
+  })
+
+  test('treats the thresholds as exclusive', () => {
+    expect(getTitleSizeClass('a'.repeat(70))).toBe('')
+    expect(getTitleSizeClass('a'.repeat(130))).toBe('is-long')
   })
 })
