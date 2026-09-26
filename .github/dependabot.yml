@@ -9,6 +9,18 @@ updates:
       bun:
         patterns:
           - '*'
+    # typescript-eslint is the parser behind `edge-apps-scripts lint`, and every
+    # published release declares `peer typescript@">=4.8.4 <6.1.0"` — there is no
+    # version that accepts TypeScript 7. Bun installs the major anyway and lint
+    # then dies with `TypeError: undefined is not an object (evaluating
+    # 'ts.Extension.Cjs')`. Because the bun group matches on a single '*'
+    # pattern, that one unusable major also holds back every other bump riding
+    # in the same PR. Hold majors until typescript-eslint ships support; minors
+    # and patches still flow.
+    ignore:
+      - dependency-name: 'typescript'
+        update-types:
+          - 'version-update:semver-major'
 
   - package-ecosystem: 'github-actions'
     directory: '/'
