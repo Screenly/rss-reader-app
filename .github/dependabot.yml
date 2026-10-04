@@ -5,6 +5,14 @@ updates:
     directory: '/'
     schedule:
       interval: 'monthly'
+    ignore:
+      # typescript-eslint (pulled in via @screenly/edge-apps) declares a peer
+      # range of typescript ">=4.8.4 <6.1.0". TypeScript 7 dropped
+      # ts.Extension.Cjs, so `bun run lint` aborts with
+      # "TypeError: undefined is not an object (evaluating 'ts.Extension.Cjs')".
+      # Remove this once typescript-eslint supports TypeScript 7.
+      - dependency-name: 'typescript'
+        versions: ['>=7']
     groups:
       bun:
         patterns:
