@@ -1,3 +1,5 @@
+[![Version](https://img.shields.io/github/v/release/Screenly/rss-reader-app)](https://github.com/Screenly/rss-reader-app/releases/latest)
+
 # RSS Reader
 
 Displays the latest entries from any RSS feed on your Screenly digital signage screens.
