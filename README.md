@@ -1,3 +1,5 @@
+[![Version](https://img.shields.io/github/v/release/Screenly/rss-reader-app)](https://github.com/Screenly/rss-reader-app/releases/latest)
+
 # RSS Reader
 
 Displays the latest entries from any RSS feed on your Screenly digital signage screens.
@@ -42,6 +44,22 @@ bun run build
 screenly edge-app create --name rss-reader --in-place
 bun run deploy
 screenly edge-app instance create
+```
+
+### Releasing
+
+Pushes to `main` deploy to stage automatically. To release to production, tag a commit on `main` and push the tag (the workflow refuses tags not on `main`):
+
+```bash
+git checkout main && git pull
+git tag v26.10.0
+git push origin v26.10.0
+```
+
+Then publish a GitHub Release whose notes list the pull requests merged since the previous release. Add `--draft` to review the notes before publishing:
+
+```bash
+gh release create v26.10.0 --verify-tag --generate-notes --title v26.10.0
 ```
 
 ## Configuration

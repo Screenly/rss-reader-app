@@ -30,12 +30,12 @@ jobs:
     environment: ${{ inputs.environment }}
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: main
-      - uses: Screenly/edge-apps-actions/initialize@f4ccd2bd50db5fb0a5147d287ac03cafe552d29b
+      - uses: Screenly/edge-apps-actions/initialize@v26.10.0
         with:
           screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN }}
           edge_app_name: ${{ inputs.edge_app_name }}
           edge_app_title: ${{ inputs.edge_app_title }}
           environment: ${{ inputs.environment }}
-          edge_app_id: ${{ secrets.EDGE_APP_ID || (inputs.environment == 'production' && vars.PRODUCTION_EDGE_APP_ID || (inputs.environment == 'stage' && vars.STAGE_EDGE_APP_ID)) }}
+          # First create: leave STAGE_EDGE_APP_ID / PRODUCTION_EDGE_APP_ID unset
+          # so this is "". After create: set the matching var to the printed id.
+          edge_app_id: ${{ (inputs.environment == 'production' && vars.PRODUCTION_EDGE_APP_ID) || (inputs.environment == 'stage' && vars.STAGE_EDGE_APP_ID) || '' }}
