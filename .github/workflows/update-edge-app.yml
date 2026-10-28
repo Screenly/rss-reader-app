@@ -6,47 +6,17 @@ on:
   push:
     branches:
       - main
+      - master
     tags:
       - 'v[0-9]*'
+
+permissions:
+  contents: read
 
 run-name: Updating RSS Reader in ${{ (github.event_name == 'push' && !github.event.deleted && startsWith(github.ref, 'refs/tags/v')) && 'production' || 'stage' }}
 
 jobs:
-  deploy-stage:
-    name: Updating RSS Reader in stage
-    runs-on: ubuntu-latest
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
-    environment: stage
-    steps:
-      - uses: actions/checkout@v7
-      - uses: Screenly/edge-apps-actions/update@v26.10.0
-        with:
-          screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN }}
-          environment: stage
-          delete_missing_settings: 'true'
-          edge_app_id: ${{ vars.STAGE_EDGE_APP_ID }}
-
-  deploy-production:
-    name: Updating RSS Reader in production
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && !github.event.deleted && startsWith(github.ref, 'refs/tags/v')
-    environment: production
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - name: Verify tag is on the default branch
-        env:
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-        run: |
-          git fetch --no-tags origin "$DEFAULT_BRANCH"
-          if ! git merge-base --is-ancestor HEAD FETCH_HEAD; then
-            echo "Tag $GITHUB_REF_NAME is not on $DEFAULT_BRANCH; refusing to deploy to production."
-            exit 1
-          fi
-      - uses: Screenly/edge-apps-actions/update@v26.10.0
-        with:
-          screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN }}
-          environment: production
-          delete_missing_settings: 'true'
-          edge_app_id: ${{ vars.PRODUCTION_EDGE_APP_ID }}
+  update:
+    uses: Screenly/edge-apps-actions/.github/workflows/update.yml@v26.10.2
+    secrets:
+      SCREENLY_API_TOKEN: ${{ secrets.SCREENLY_API_TOKEN }}

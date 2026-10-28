@@ -21,21 +21,17 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: read
+
 run-name: Initializing ${{ inputs.edge_app_name }} in ${{ inputs.environment }}
 
 jobs:
   initialize:
-    name: Initializing ${{ inputs.edge_app_name }} in ${{ inputs.environment }}
-    runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: Screenly/edge-apps-actions/initialize@v26.10.0
-        with:
-          screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN }}
-          edge_app_name: ${{ inputs.edge_app_name }}
-          edge_app_title: ${{ inputs.edge_app_title }}
-          environment: ${{ inputs.environment }}
-          # First create: leave STAGE_EDGE_APP_ID / PRODUCTION_EDGE_APP_ID unset
-          # so this is "". After create: set the matching var to the printed id.
-          edge_app_id: ${{ (inputs.environment == 'production' && vars.PRODUCTION_EDGE_APP_ID) || (inputs.environment == 'stage' && vars.STAGE_EDGE_APP_ID) || '' }}
+    uses: Screenly/edge-apps-actions/.github/workflows/initialize.yml@v26.10.2
+    with:
+      environment: ${{ inputs.environment }}
+      edge_app_name: ${{ inputs.edge_app_name }}
+      edge_app_title: ${{ inputs.edge_app_title }}
+    secrets:
+      SCREENLY_API_TOKEN: ${{ secrets.SCREENLY_API_TOKEN }}
