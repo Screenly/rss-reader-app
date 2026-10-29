@@ -13,7 +13,8 @@ updates:
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
-      interval: 'monthly'
+      interval: 'weekly'
+    target-branch: 'development'
     groups:
       github-actions:
         patterns:
