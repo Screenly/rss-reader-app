@@ -1,6 +1,6 @@
 {
   "name": "rss-reader-app",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "devDependencies": {
     "@playwright/test": "^1.64.1",
     "@screenly/edge-apps": "^26.8.0",
