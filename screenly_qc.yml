@@ -41,6 +41,21 @@ settings:
     optional: true
     help_text: Whether to enable analytics or not
     is_global: true
+  mode:
+    type: string
+    default_value: headlines
+    title: Mode
+    optional: true
+    help_text:
+      properties:
+        help_text: Choose the layout for where the screen is placed.
+        options:
+          - label: Headlines (lead story and list)
+            value: headlines
+          - label: List (headlines only, maximum readability)
+            value: list
+        type: select
+      schema_version: 1
   override_locale:
     type: string
     default_value: en
