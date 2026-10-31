@@ -1,3 +1,4 @@
+---
 name: Checks
 
 on:
@@ -5,14 +6,16 @@ on:
     branches:
       - development
       - main
+      - master
   pull_request:
     branches:
       - development
       - main
+      - master
+
+permissions:
+  contents: read
 
 jobs:
   checks:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: Screenly/edge-apps-actions/checks@v1
+    uses: Screenly/edge-apps-actions/.github/workflows/checks.yml@v26.10.2
