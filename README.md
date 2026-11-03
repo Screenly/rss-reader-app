@@ -48,18 +48,18 @@ screenly edge-app instance create
 
 ### Releasing
 
-Pushes to `main` start a stage deploy, which waits for approval. To release to production, tag a commit on `main` and push the tag (the workflow refuses tags not on `main`); the production deploy also waits for approval:
+Pushes to `main` start a stage deploy, which waits for approval. To release to production, tag a commit on `main` with the next CalVer version (`vYY.MM.N`, e.g. `v26.11.0`; check `git tag --sort=-v:refname | head -1` for the latest) and push the tag. The workflows refuse tags not on `main` and only treat numeric `v[0-9]*` tags as releases; the production deploy also waits for approval. Replace `vYY.MM.N` below with the new version:
 
 ```bash
 git checkout main && git pull
-git tag v26.10.0
-git push origin v26.10.0
+git tag vYY.MM.N
+git push origin vYY.MM.N
 ```
 
 Then publish a GitHub Release whose notes list the pull requests merged since the previous release. Add `--draft` to review the notes before publishing:
 
 ```bash
-gh release create v26.10.0 --verify-tag --generate-notes --title v26.10.0
+gh release create vYY.MM.N --verify-tag --generate-notes --title vYY.MM.N
 ```
 
 ## Configuration
