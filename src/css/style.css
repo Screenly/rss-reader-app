@@ -99,6 +99,12 @@ auto-scaler {
   border-left: 0.5rem solid var(--news-accent-ink);
 }
 
+/* Clamped text boxes have no minimum height, so flex would squeeze them and
+   cut lines through the middle. The clamps below are sized to fit instead. */
+.news-hero > * {
+  flex-shrink: 0;
+}
+
 .news-hero-image {
   width: 100%;
   height: 15rem;
@@ -132,6 +138,9 @@ auto-scaler {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   overflow: hidden;
+  /* The tight line-height leaves no room under the last clamped line, so
+     descenders (g, p, y) would be cut off without this */
+  padding-bottom: 0.12em;
 }
 
 .news-hero-title.is-long {
@@ -152,8 +161,15 @@ auto-scaler {
   color: var(--news-ink-dim);
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 2;
   overflow: hidden;
+}
+
+/* Without a lead image there is room for more of the story */
+@media (orientation: landscape) {
+  .news-hero-image.is-hidden ~ .news-hero-excerpt {
+    -webkit-line-clamp: 4;
+  }
 }
 
 .news-list {
