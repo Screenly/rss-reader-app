@@ -1,5 +1,11 @@
 import { describe, test, expect, beforeEach } from 'bun:test'
-import { getTitleSizeClass, stripHtml, loadCache, saveCache } from './utils'
+import {
+  getTitleSizeClass,
+  loadCache,
+  resizeImageUrl,
+  saveCache,
+  stripHtml,
+} from './utils'
 import type { RssEntry } from './utils'
 
 const localStorageMock = (() => {
@@ -94,5 +100,30 @@ describe('getTitleSizeClass', () => {
   test('treats the thresholds as exclusive', () => {
     expect(getTitleSizeClass('a'.repeat(70))).toBe('')
     expect(getTitleSizeClass('a'.repeat(130))).toBe('is-long')
+  })
+})
+
+describe('resizeImageUrl', () => {
+  const BBC =
+    'https://ichef.bbci.co.uk/ace/standard/240/cpsprodpb/50a9/live/ece0.jpg'
+  const bbcAt = (width: number) =>
+    `https://ichef.bbci.co.uk/ace/standard/${width}/cpsprodpb/50a9/live/ece0.jpg`
+
+  test('rounds up to a width the BBC image CDN serves', () => {
+    // 1080 itself is a 404 on the CDN
+    expect(resizeImageUrl(BBC, 1080)).toBe(bbcAt(1280))
+    expect(resizeImageUrl(BBC, 480)).toBe(bbcAt(480))
+    expect(resizeImageUrl(BBC, 270)).toBe(bbcAt(480))
+    expect(resizeImageUrl(BBC, 120)).toBe(bbcAt(240))
+  })
+
+  test('caps at the largest served width', () => {
+    expect(resizeImageUrl(BBC, 4096)).toBe(bbcAt(2048))
+  })
+
+  test('leaves other feeds untouched', () => {
+    const nyt = 'https://static01.nyt.com/images/2026/11/03/240/photo.jpg'
+    expect(resizeImageUrl(nyt, 1080)).toBe(nyt)
+    expect(resizeImageUrl('', 1080)).toBe('')
   })
 })
