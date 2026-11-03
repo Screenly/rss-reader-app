@@ -19,6 +19,7 @@ import { getNewsMode, type NewsMode } from './mode'
 import {
   getTitleSizeClass,
   loadCache,
+  resizeImageUrl,
   saveCache,
   stripHtml,
   type RssEntry,
@@ -26,6 +27,30 @@ import {
 
 const MAX_ENTRIES = 6
 const DATE_UPDATE_INTERVAL_MS = 60 * 1000
+
+// The lead image never spans more than the screen's shorter side in either
+// orientation, and thumbnails stay well under a quarter of it
+function heroImageWidth(): number {
+  return Math.min(window.innerWidth, window.innerHeight)
+}
+
+function thumbnailImageWidth(): number {
+  return heroImageWidth() / 4
+}
+
+// Loads the resized image, falling back to the feed's own URL if the resized
+// one fails, and hiding the image only if that fails too
+function setFeedImage(image: HTMLImageElement, url: string, width: number) {
+  const resized = resizeImageUrl(url, width)
+  image.onerror = () => {
+    if (image.src === resized && resized !== url) {
+      image.src = url
+    } else {
+      image.classList.add('is-hidden')
+    }
+  }
+  image.src = resized
+}
 
 interface FeedConfig {
   rssUrl: string
@@ -111,8 +136,7 @@ function createRow(entry: RssEntry, withImage: boolean): HTMLLIElement {
     const image = document.createElement('img')
     image.className = 'news-item-image'
     image.alt = ''
-    image.onerror = () => image.classList.add('is-hidden')
-    image.src = entry.imageUrl
+    setFeedImage(image, entry.imageUrl, thumbnailImageWidth())
     item.appendChild(image)
   }
 
@@ -123,7 +147,7 @@ function renderHero(els: NewsElements, entry: RssEntry) {
   if (els.heroImage) {
     els.heroImage.classList.toggle('is-hidden', !entry.imageUrl)
     if (entry.imageUrl) {
-      els.heroImage.src = entry.imageUrl
+      setFeedImage(els.heroImage, entry.imageUrl, heroImageWidth())
     }
   }
   if (els.heroDate) {
@@ -212,11 +236,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.body.classList.add(`mode-${mode}`)
 
   const els = queryElements()
-
-  const heroImage = els.heroImage
-  if (heroImage) {
-    heroImage.onerror = () => heroImage.classList.add('is-hidden')
-  }
 
   const logo = els.logo
   if (logo) {
