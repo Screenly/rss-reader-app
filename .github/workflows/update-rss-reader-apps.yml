@@ -1,4 +1,8 @@
 ---
+# Deploys every feed app in deployed-apps.yml (BBC News, Fox News, ...). They
+# all run this repo's code; each is the shared edge-apps-actions update with
+# its own id and a manifest made from its deployed-apps.yml entry. The main
+# RSS Reader app deploys separately, through update-edge-app.yml.
 name: Update RSS Reader Apps
 
 on:
@@ -12,11 +16,6 @@ on:
     inputs:
       app_key:
         description: "App key (leave empty to update ALL apps, or enter one key like 'bbc-news')"
-        required: false
-        type: string
-
-      override_app_name:
-        description: 'Override app name (optional, leave empty to use deployed-apps.yml)'
         required: false
         type: string
 
@@ -40,6 +39,9 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: read
+
 run-name: Update RSS Reader${{ inputs.app_key && format(' - {0}', inputs.app_key) || 's (ALL)' }} in ${{ startsWith(github.ref, 'refs/tags/v') && 'production' || 'stage' }}
 
 jobs:
@@ -50,10 +52,7 @@ jobs:
     if: ${{ !github.event.deleted }}
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
-      app_count: ${{ steps.set-matrix.outputs.app_count }}
       environment: ${{ steps.set-env.outputs.environment }}
-      api_base_url: ${{ steps.set-env.outputs.api_base_url }}
-      manifest_file_name: ${{ steps.set-env.outputs.manifest_file_name }}
 
     steps:
       - uses: actions/checkout@v7
@@ -69,139 +68,107 @@ jobs:
         run: |
           if [[ "$GITHUB_REF" =~ ^refs/tags/v[0-9] ]]; then
             echo "environment=production" >> "$GITHUB_OUTPUT"
-            echo "api_base_url=https://api.screenlyapp.com" >> "$GITHUB_OUTPUT"
-            echo "manifest_file_name=screenly.yml" >> "$GITHUB_OUTPUT"
           else
             echo "environment=stage" >> "$GITHUB_OUTPUT"
-            echo "api_base_url=https://api.screenlyappstage.com" >> "$GITHUB_OUTPUT"
-            echo "manifest_file_name=screenly_qc.yml" >> "$GITHUB_OUTPUT"
           fi
 
-      # Same rule as update-edge-app.yml: production only from tags on the default branch.
-      - name: Verify tag is on the default branch
-        if: steps.set-env.outputs.environment == 'production'
+      # Same rules as the shared update workflow: production only from tags on
+      # the default branch, stage only from the default branch itself.
+      - name: Verify ref
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          ENVIRONMENT: ${{ steps.set-env.outputs.environment }}
         run: |
-          git fetch --no-tags origin "$DEFAULT_BRANCH"
-          if ! git merge-base --is-ancestor HEAD FETCH_HEAD; then
-            echo "Tag $GITHUB_REF_NAME is not on $DEFAULT_BRANCH; refusing to deploy to production."
+          if [ "$ENVIRONMENT" = production ]; then
+            git fetch --no-tags origin "$DEFAULT_BRANCH"
+            if ! git merge-base --is-ancestor HEAD FETCH_HEAD; then
+              echo "::error::Tag $GITHUB_REF_NAME is not on $DEFAULT_BRANCH; refusing to deploy to production."
+              exit 1
+            fi
+          elif [ "$GITHUB_REF" != "refs/heads/$DEFAULT_BRANCH" ]; then
+            echo "::error::Stage deploys run from $DEFAULT_BRANCH only, not $GITHUB_REF_NAME."
             exit 1
           fi
 
       - name: Setup yq
         uses: ./.github/actions/setup-yq
 
+      # An app without an id for this environment (e.g. not yet initialized in
+      # production) is skipped, not deployed with an empty id
       - name: Generate App Matrix
         id: set-matrix
+        env:
+          APP_KEY: ${{ inputs.app_key }}
+          ENVIRONMENT: ${{ steps.set-env.outputs.environment }}
         run: |
-          CONFIG_FILE="./deployed-apps.yml"
-          APP_KEY_INPUT="${{ inputs.app_key }}"
-          ENVIRONMENT="${{ steps.set-env.outputs.environment }}"
+          set -euo pipefail
+          APPS=$(yq -o=json '.apps' deployed-apps.yml)
 
-          if [ -n "$APP_KEY_INPUT" ]; then
-            if ! yq ".apps.$APP_KEY_INPUT" "$CONFIG_FILE" | grep -q "ids:" || \
-               [ "$(yq -r ".apps.$APP_KEY_INPUT.ids | has(\"$ENVIRONMENT\")" "$CONFIG_FILE")" != "true" ]; then
-              echo "Error: App key '$APP_KEY_INPUT' missing 'ids.$ENVIRONMENT'"
-              exit 1
-            fi
+          if [ -n "$APP_KEY" ] && [ "$(jq --arg key "$APP_KEY" 'has($key)' <<<"$APPS")" != true ]; then
+            echo "::error::No app '$APP_KEY' in deployed-apps.yml."
+            exit 1
+          fi
 
-            MATRIX=$(yq -o=json -I=0 '.apps | to_entries | map(select(.key == "'"$APP_KEY_INPUT"'") | {"key": .key, "id": .value.ids.'"$ENVIRONMENT"'})' "$CONFIG_FILE")
-            APP_COUNT=1
-          else
-            MATRIX=$(yq -o=json -I=0 '.apps | to_entries | map(select(.value.ids and (.value.ids | has("'"$ENVIRONMENT"'"))) | {"key": .key, "id": .value.ids.'"$ENVIRONMENT"'})' "$CONFIG_FILE")
-            APP_COUNT=$(echo "$MATRIX" | yq 'length')
+          MATRIX=$(jq -c --arg env "$ENVIRONMENT" --arg key "$APP_KEY" '
+            to_entries
+            | map(select($key == "" or .key == $key))
+            | map({key, id: ((.value.ids // {})[$env] // "" | tostring)})
+            | map(select(.id != ""))
+          ' <<<"$APPS")
 
-            if [ "$APP_COUNT" -eq 0 ]; then
-              echo "No apps found with IDs configured for environment: $ENVIRONMENT"
-              exit 1
-            fi
+          SKIPPED=$(jq -r --arg env "$ENVIRONMENT" --arg key "$APP_KEY" '
+            to_entries
+            | map(select(($key == "" or .key == $key) and (((.value.ids // {})[$env] // "") | tostring) == ""))
+            | map(.key) | join(", ")
+          ' <<<"$APPS")
+          if [ -n "$SKIPPED" ]; then
+            echo "::notice::No $ENVIRONMENT id in deployed-apps.yml, skipping: $SKIPPED"
+          fi
+
+          if [ "$(jq length <<<"$MATRIX")" -eq 0 ]; then
+            echo "::error::No apps to deploy: none selected have an id for $ENVIRONMENT."
+            exit 1
           fi
 
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
-          echo "app_count=$APP_COUNT" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Deploying to $ENVIRONMENT"
+            jq -r '.[] | "- \(.key): \(.id)"' <<<"$MATRIX"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   deploy:
     name: Update ${{ matrix.app.key }}
     needs: prepare
     runs-on: ubuntu-latest
-    if: needs.prepare.outputs.app_count > 0
     environment: ${{ needs.prepare.outputs.environment }}
+    # One deploy at a time per app and environment; a running one is never
+    # cancelled, matching the shared workflows
+    concurrency:
+      group: feed-app-${{ needs.prepare.outputs.environment }}-${{ matrix.app.key }}
+      cancel-in-progress: false
     strategy:
       matrix:
         app: ${{ fromJson(needs.prepare.outputs.matrix) }}
       fail-fast: false
-    env:
-      API_BASE_URL: ${{ needs.prepare.outputs.api_base_url }}
-      MANIFEST_FILE_NAME: ${{ needs.prepare.outputs.manifest_file_name }}
-      SCREENLY_API_TOKEN: ${{ secrets.SCREENLY_API_TOKEN }}
 
     steps:
       - uses: actions/checkout@v7
 
-      - name: Setup yq
-        uses: ./.github/actions/setup-yq
-
-      - name: Update manifest from config
-        run: |
-          CONFIG_FILE="./deployed-apps.yml"
-          APP_ID="${{ matrix.app.id }}"
-          APP_KEY="${{ matrix.app.key }}"
-
-          CONFIG_APP_NAME=$(yq ".apps.$APP_KEY.app_name" "$CONFIG_FILE")
-          CONFIG_DESC=$(yq ".apps.$APP_KEY.description" "$CONFIG_FILE")
-          CONFIG_RSS_TITLE=$(yq ".apps.$APP_KEY.rss_title" "$CONFIG_FILE")
-          CONFIG_ICON=$(yq ".apps.$APP_KEY.icon_url" "$CONFIG_FILE")
-          CONFIG_RSS_URL=$(yq ".apps.$APP_KEY.rss_url" "$CONFIG_FILE")
-
-          FINAL_APP_NAME="${{ inputs.override_app_name }}"
-          [ -z "$FINAL_APP_NAME" ] && FINAL_APP_NAME="$CONFIG_APP_NAME"
-
-          FINAL_DESC="${{ inputs.override_description }}"
-          [ -z "$FINAL_DESC" ] && FINAL_DESC="$CONFIG_DESC"
-
-          FINAL_RSS_TITLE="${{ inputs.override_rss_title }}"
-          [ -z "$FINAL_RSS_TITLE" ] && FINAL_RSS_TITLE="$CONFIG_RSS_TITLE"
-
-          FINAL_ICON="${{ inputs.override_icon_url }}"
-          [ -z "$FINAL_ICON" ] && FINAL_ICON="$CONFIG_ICON"
-
-          FINAL_RSS_URL="${{ inputs.override_rss_url }}"
-          [ -z "$FINAL_RSS_URL" ] && FINAL_RSS_URL="$CONFIG_RSS_URL"
-
-          yq -i '.id = "'"$APP_ID"'"' "$MANIFEST_FILE_NAME"
-          yq -i '.description = "'"$FINAL_DESC"'"' "$MANIFEST_FILE_NAME"
-          yq -i '.icon = "'"$FINAL_ICON"'"' "$MANIFEST_FILE_NAME"
-          yq -i '.settings.rss_url.default_value = "'"$FINAL_RSS_URL"'"' "$MANIFEST_FILE_NAME"
-          yq -i '.settings.rss_title.default_value = "'"$FINAL_RSS_TITLE"'"' "$MANIFEST_FILE_NAME"
-
-      - name: Show updated manifest
-        run: cat "$MANIFEST_FILE_NAME"
-
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Build
-        run: bun run build
-
-      - name: Deploy Edge App
-        uses: screenly/cli@master
+      - name: Apply ${{ matrix.app.key }} config
+        uses: ./.github/actions/apply-feed-app
         with:
-          screenly_api_token: ${{ env.SCREENLY_API_TOKEN }}
-          cli_commands: edge-app deploy --path="./dist" --delete-missing-settings=true
+          app_key: ${{ matrix.app.key }}
+          environment: ${{ needs.prepare.outputs.environment }}
+          override_description: ${{ inputs.override_description }}
+          override_icon_url: ${{ inputs.override_icon_url }}
+          override_rss_title: ${{ inputs.override_rss_title }}
+          override_rss_url: ${{ inputs.override_rss_url }}
 
-  summary:
-    name: Deployment Summary
-    needs: [prepare, deploy]
-    runs-on: ubuntu-latest
-    if: always()
-
-    steps:
-      - name: Summary
-        run: |
-          echo "Environment: ${{ needs.prepare.outputs.environment }}"
-          echo "Apps processed: ${{ needs.prepare.outputs.app_count }}"
-          echo "Deployment status: ${{ needs.deploy.result }}"
+      - name: Deploy ${{ matrix.app.key }}
+        uses: Screenly/edge-apps-actions/update@v26.10.2
+        with:
+          screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN }}
+          environment: ${{ needs.prepare.outputs.environment }}
+          edge_app_id: ${{ matrix.app.id }}
+          # Settings removed from screenly.yml are removed from the app too
+          delete_missing_settings: 'true'
