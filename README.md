@@ -86,7 +86,7 @@ A feed app needs no code: it is an entry in `deployed-apps.yml`.
          production: ''
    ```
 
-   Apps without an id are skipped by deploys, so merging this changes nothing yet.
+   Merging starts the usual stage deploy of the main app and the other feed apps. The new app is skipped, and named in the run log, until it has an id.
 
 3. **Create it on stage:** run **Actions → Initialize Custom RSS Reader App** from `main`, with environment `stage` and the app key. It refuses to run if the app already has a stage id or an Edge App with that name exists.
 4. **Record the id:** copy the id from the run's summary into `ids.stage` and merge. From now on every stage deploy includes the app.
