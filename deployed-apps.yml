@@ -1,16 +1,18 @@
-# Deployed RSS Reader Apps
+# Feed apps: Edge Apps that all run this repo's code, each with its own
+# settings and ids. update-rss-reader-apps.yml deploys them; see DEPLOYMENT.md
+# for adding one.
 #
 # Format:
 # apps:
 #   app-key:
-#     app_name: "Instance Title"
-#     description: "Manifest Description"
-#     rss_title: "UI Title"
-#     icon_url: "https://..."
-#     rss_url: "https://..."
+#     app_name: 'Edge App name and instance title'
+#     description: 'Manifest description'
+#     rss_title: 'rss_title default, shown in the header'
+#     icon_url: 'https://...'
+#     rss_url: 'https://...'
 #     ids:
-#       stage: "STAGE_APP_ID"
-#       production: "PROD_APP_ID"
+#       stage: 'STAGE_APP_ID'
+#       production: 'PROD_APP_ID' # empty until initialized there; skipped
 
 apps:
   bbc-news:

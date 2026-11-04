@@ -1,43 +1,11 @@
-# Custom RSS Reader Deployment Guide
+# Feed App Deployment Guide
 
-Deploy multiple custom RSS reader apps from a single template using GitHub Actions.
+This repo's code runs several Screenly Edge Apps. Besides the main RSS Reader app, each **feed app** (BBC News, Fox News, ...) is its own Edge App built from the same code, with its own name, icon and default feed.
 
-## Workflows
+- The **main RSS Reader app** deploys through `update-edge-app.yml`, using the repo variables `STAGE_EDGE_APP_ID` and `PRODUCTION_EDGE_APP_ID`, like every other Edge App.
+- **Feed apps** are listed in `deployed-apps.yml`, which holds each one's settings and its stage and production app ids. `update-rss-reader-apps.yml` deploys them.
 
-### Initialize Custom RSS Reader App
-
-Creates a new RSS reader app.
-
-**Inputs:**
-
-- Environment (stage/production)
-- App Name (instance title)
-- App Description (manifest description)
-- RSS Title (source label displayed on each card)
-- Icon URL
-- RSS Feed URL
-
-**Steps:**
-
-1. Run workflow with inputs
-2. Note the generated App ID from logs
-3. Add app to `deployed-apps.yml`
-
-### Update RSS Reader Apps
-
-Updates one or all RSS reader apps.
-
-**Inputs:**
-
-- Environment (required)
-- App key (empty = all apps, specific key = one app)
-- Override fields (optional)
-
-**Behavior:**
-
-- Reads settings from `deployed-apps.yml`
-- Applies overrides if provided
-- Updates specified app(s)
+Both use the shared [edge-apps-actions](https://github.com/Screenly/edge-apps-actions). For each feed app, the workflow writes its `deployed-apps.yml` entry into `screenly.yml` (description, icon and the `rss_title` and `rss_url` defaults), then calls the shared `update` action with the app's id. All other settings come from `screenly.yml` unchanged, so a new setting reaches every feed app on the next deploy.
 
 ## Configuration
 
@@ -45,44 +13,40 @@ Updates one or all RSS reader apps.
 
 ```yaml
 apps:
-  app-key:
-    app_name: 'Instance Title'
-    description: 'Manifest Description'
-    rss_title: 'UI Title'
-    icon_url: 'https://...'
-    rss_url: 'https://...'
+  bbc-news: # app key, used to pick an app in the workflows
+    app_name: 'BBC News' # Edge App name and instance title
+    description: 'Latest news from BBC World Service' # manifest description
+    rss_title: 'BBC News' # rss_title default, shown in the header
+    icon_url: 'https://...' # manifest icon
+    rss_url: 'http://feeds.bbci.co.uk/news/rss.xml' # rss_url default
     ids:
-      stage: 'STAGE_APP_ID'
-      production: 'PROD_APP_ID'
+      stage: '01K7...'
+      production: '01K8...' # leave empty until the app exists there
 ```
 
-Note: Common settings are shared; only App IDs differ per environment.
+An app with no id for an environment is skipped there, not deployed with an empty id.
 
-## Examples
+## Releasing
 
-**Create new app:**
+Feed apps release together with the main app:
 
-1. Run "Initialize" workflow
-2. Copy App ID from logs
-3. Add to `deployed-apps.yml`
+- A push to `main` deploys every feed app with a stage id to **stage**.
+- A `vYY.MM.N` tag on `main` deploys every feed app with a production id to **production**.
 
-**Update one app:**
+Each deploy waits for approval in its environment. See the README's release section for tagging.
 
-```yml
-App key: bbc-news
-(overrides: optional)
-```
+## Adding a feed app
 
-**Update all apps:**
+1. Add an entry to `deployed-apps.yml` with empty ids, and merge it to `main`.
+2. Run **Actions → Initialize Custom RSS Reader App** from `main` with the app key and `stage`. It refuses to run if the app already has a stage id, or if an Edge App with that name already exists.
+3. Copy the id from the run's summary into `ids.stage` and merge. The next stage deploy includes the app.
+4. When it's ready for production, repeat steps 2 and 3 with `production`.
 
-```yml
-App key: (empty)
-(overrides: optional)
-```
+The shared action's summary also says to set a repo variable. Ignore that for feed apps; their ids live only in `deployed-apps.yml`.
 
-**Change RSS URL:**
+## Updating feed apps by hand
 
-```yml
-App key: bbc-news
-Override RSS URL: https://new-url.com
-```
+Run **Actions → Update RSS Reader Apps** from `main` (stage) or from a release tag (production):
+
+- **App key:** empty for every app, or one key such as `bbc-news`.
+- **Overrides (optional):** description, RSS title, icon URL or RSS URL, used instead of `deployed-apps.yml` for this run only. To change one permanently, edit `deployed-apps.yml`.
