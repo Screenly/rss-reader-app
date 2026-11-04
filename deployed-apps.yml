@@ -15,17 +15,6 @@
 #       production: 'PROD_APP_ID' # empty until initialized there; skipped
 
 apps:
-#   app-key:
-#     app_name: "Instance Title"
-#     description: "Manifest Description"
-#     rss_title: "UI Title"
-#     icon_url: "https://..."
-#     rss_url: "https://..."
-#     ids:
-#       stage: "STAGE_APP_ID"
-#       production: "PROD_APP_ID"
-
-apps:
   bbc-news:
     app_name: 'BBC News'
     description: 'Latest news from BBC World Service'
