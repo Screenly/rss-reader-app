@@ -64,15 +64,16 @@ gh release create vYY.MM.N --verify-tag --generate-notes --title vYY.MM.N
 
 ## Configuration
 
-| Setting             | Description                                                          | Type     | Default                                |
-| ------------------- | -------------------------------------------------------------------- | -------- | -------------------------------------- |
-| `bypass_cors`       | Route the RSS feed URL through the CORS proxy                        | optional | `true`                                 |
-| `cache_interval`    | How often (in seconds) to refresh the feed                           | required | `1800`                                 |
-| `display_errors`    | Show errors on screen for debugging purposes                         | optional | `false`                                |
-| `override_locale`   | Override the locale used for date formatting (e.g. `en`, `fr`, `de`) | optional | `en`                                   |
-| `override_timezone` | Override the timezone for date display (e.g. `Europe/London`)        | optional | system timezone                        |
-| `rss_title`         | Source label displayed on each card                                  | required | `BBC News`                             |
-| `rss_url`           | URL of the RSS feed to display                                       | required | `http://feeds.bbci.co.uk/news/rss.xml` |
+| Setting             | Description                                                                                                  | Type     | Default                                |
+| ------------------- | ------------------------------------------------------------------------------------------------------------ | -------- | -------------------------------------- |
+| `bypass_cors`       | Route the RSS feed URL through the CORS proxy                                                                | optional | `true`                                 |
+| `cache_interval`    | How often (in seconds) to refresh the feed                                                                   | required | `1800`                                 |
+| `display_errors`    | Show errors on screen for debugging purposes                                                                 | optional | `false`                                |
+| `mode`              | Layout: `headlines` (lead story with image, plus a list) or `list` (headlines only, for maximum readability) | optional | `headlines`                            |
+| `override_locale`   | Override the locale used for date formatting (e.g. `en`, `fr`, `de`)                                         | optional | `en`                                   |
+| `override_timezone` | Override the timezone for date display (e.g. `Europe/London`)                                                | optional | system timezone                        |
+| `rss_title`         | Source name shown in the header                                                                              | required | `BBC News`                             |
+| `rss_url`           | URL of the RSS feed to display                                                                               | required | `http://feeds.bbci.co.uk/news/rss.xml` |
 
 ## Example Feeds
 
