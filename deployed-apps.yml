@@ -1,6 +1,6 @@
 # Feed apps: Edge Apps that all run this repo's code, each with its own
-# settings and ids. update-rss-reader-apps.yml deploys them; see DEPLOYMENT.md
-# for adding one.
+# settings and ids. update-rss-reader-apps.yml deploys them; see the README
+# ("Publishing a new feed app") for adding one.
 #
 # Format:
 # apps:

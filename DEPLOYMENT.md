@@ -26,27 +26,10 @@ apps:
 
 An app with no id for an environment is skipped there, not deployed with an empty id.
 
-## Releasing
+## Releasing, adding and updating feed apps
 
-Feed apps release together with the main app:
+The steps are in the README:
 
-- A push to `main` deploys every feed app with a stage id to **stage**.
-- A `vYY.MM.N` tag on `main` deploys every feed app with a production id to **production**.
-
-Each deploy waits for approval in its environment. See the README's release section for tagging.
-
-## Adding a feed app
-
-1. Add an entry to `deployed-apps.yml` with empty ids, and merge it to `main`.
-2. Run **Actions → Initialize Custom RSS Reader App** from `main` with the app key and `stage`. It refuses to run if the app already has a stage id, or if an Edge App with that name already exists.
-3. Copy the id from the run's summary into `ids.stage` and merge. The next stage deploy includes the app.
-4. When it's ready for production, repeat steps 2 and 3 with `production`.
-
-The shared action's summary also says to set a repo variable. Ignore that for feed apps; their ids live only in `deployed-apps.yml`.
-
-## Updating feed apps by hand
-
-Run **Actions → Update RSS Reader Apps** from `main` (stage) or from a release tag (production):
-
-- **App key:** empty for every app, or one key such as `bbc-news`.
-- **Overrides (optional):** description, RSS title, icon URL or RSS URL, used instead of `deployed-apps.yml` for this run only. To change one permanently, edit `deployed-apps.yml`.
+- [Releasing](README.md#releasing): one tag releases the main app and every feed app.
+- [Publishing a new feed app](README.md#publishing-a-new-feed-app)
+- [Updating a feed app](README.md#updating-a-feed-app)
