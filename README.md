@@ -46,6 +46,8 @@ bun run deploy
 screenly edge-app instance create
 ```
 
+This code also runs the feed apps (BBC News, Fox News, ...), each its own Edge App with its own feed. They are listed in `deployed-apps.yml` and deploy alongside the main app; see [DEPLOYMENT.md](DEPLOYMENT.md), including how to add one.
+
 ### Releasing
 
 Pushes to `main` start a stage deploy, which waits for approval. To release to production, tag a commit on `main` with the next CalVer version (`vYY.MM.N`, e.g. `v26.11.0`; check `git tag --sort=-v:refname | head -1` for the latest) and push the tag. The workflows refuse tags not on `main` and only treat numeric `v[0-9]*` tags as releases; the production deploy also waits for approval. Replace `vYY.MM.N` below with the new version:
