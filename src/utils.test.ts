@@ -104,26 +104,45 @@ describe('getTitleSizeClass', () => {
 })
 
 describe('resizeImageUrl', () => {
-  const BBC =
+  const ACE =
     'https://ichef.bbci.co.uk/ace/standard/240/cpsprodpb/50a9/live/ece0.jpg'
-  const bbcAt = (width: number) =>
-    `https://ichef.bbci.co.uk/ace/standard/${width}/cpsprodpb/50a9/live/ece0.jpg`
+  const aceAt = (size: number) =>
+    `https://ichef.bbci.co.uk/ace/standard/${size}/cpsprodpb/50a9/live/ece0.jpg`
+  const NEWS = 'https://ichef.bbci.co.uk/news/240/cpsprodpb/50a9/live/ece0.jpg'
+  const newsAt = (size: number) =>
+    `https://ichef.bbci.co.uk/news/${size}/cpsprodpb/50a9/live/ece0.jpg`
+  const IC = 'https://ichef.bbci.co.uk/images/ic/240x135/p0l7jnbt.jpg'
+  const icAt = (size: string) =>
+    `https://ichef.bbci.co.uk/images/ic/${size}/p0l7jnbt.jpg`
 
-  test('rounds up to a width the BBC image CDN serves', () => {
+  test('rounds /ace/ URLs up to a width the CDN serves', () => {
     // 1080 itself is a 404 on the CDN
-    expect(resizeImageUrl(BBC, 1080)).toBe(bbcAt(1280))
-    expect(resizeImageUrl(BBC, 480)).toBe(bbcAt(480))
-    expect(resizeImageUrl(BBC, 270)).toBe(bbcAt(480))
-    expect(resizeImageUrl(BBC, 120)).toBe(bbcAt(240))
+    expect(resizeImageUrl(ACE, 1080)).toBe(aceAt(1280))
+    expect(resizeImageUrl(ACE, 480)).toBe(aceAt(480))
+    expect(resizeImageUrl(ACE, 270)).toBe(aceAt(480))
+    expect(resizeImageUrl(ACE, 120)).toBe(aceAt(240))
+    expect(resizeImageUrl(ACE, 4096)).toBe(aceAt(2048))
   })
 
-  test('caps at the largest served width', () => {
-    expect(resizeImageUrl(BBC, 4096)).toBe(bbcAt(2048))
+  test('skips the widths /news/ URLs do not serve', () => {
+    // 1280 is a 404 on this shape
+    expect(resizeImageUrl(NEWS, 1080)).toBe(newsAt(1536))
+    expect(resizeImageUrl(NEWS, 270)).toBe(newsAt(480))
+    expect(resizeImageUrl(NEWS, 4096)).toBe(newsAt(2048))
+  })
+
+  test('resizes /images/ic/ URLs by their width-by-height segment', () => {
+    expect(resizeImageUrl(IC, 1080)).toBe(icAt('1280x720'))
+    expect(resizeImageUrl(IC, 270)).toBe(icAt('480x270'))
+    // 2048x1152 is a 403, so this shape tops out lower
+    expect(resizeImageUrl(IC, 4096)).toBe(icAt('1920x1080'))
   })
 
   test('leaves other feeds untouched', () => {
     const nyt = 'https://static01.nyt.com/images/2026/11/03/240/photo.jpg'
     expect(resizeImageUrl(nyt, 1080)).toBe(nyt)
+    const otherBbc = 'https://ichef.bbci.co.uk/onesport/cps/240/photo.jpg'
+    expect(resizeImageUrl(otherBbc, 1080)).toBe(otherBbc)
     expect(resizeImageUrl('', 1080)).toBe('')
   })
 })

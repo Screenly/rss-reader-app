@@ -25,17 +25,44 @@ export function getTitleSizeClass(title: string): string {
 }
 
 // BBC feeds only advertise 240px thumbnails, which blur on a screen-sized lead
-// story. Their image CDN serves other widths from the same path: any width up
-// to 999, but above that only a fixed set (1080, for one, is a 404). Round up
-// to a width it is known to serve. Other feeds' URLs are left untouched.
-const BBC_IMAGE_WIDTH = /^(https?:\/\/ichef\.bbci\.co\.uk\/[^/]+\/[^/]+\/)\d+\//
-const BBC_WIDTHS = [240, 480, 640, 976, 1280, 1536, 2048]
+// story. Their image CDN serves the same image at other sizes, but each URL
+// shape accepts its own set (/ace/ 404s on 1080, /news/ on 1280, /images/ic/
+// 403s on 2048x1152), so round up to a size each shape is known to serve.
+// Other feeds' URLs are left untouched.
+const BBC_IMAGE_SHAPES: { pattern: RegExp; sizes: string[] }[] = [
+  {
+    // https://ichef.bbci.co.uk/ace/standard/240/cpsprodpb/...
+    pattern: /^(https?:\/\/ichef\.bbci\.co\.uk\/ace\/[^/]+\/)\d+\//,
+    sizes: ['240', '480', '640', '976', '1280', '1536', '2048'],
+  },
+  {
+    // https://ichef.bbci.co.uk/news/240/cpsprodpb/...
+    pattern: /^(https?:\/\/ichef\.bbci\.co\.uk\/news\/)\d+\//,
+    sizes: ['240', '480', '640', '976', '1536', '2048'],
+  },
+  {
+    // https://ichef.bbci.co.uk/images/ic/240x135/p0l7jnbt.jpg (video items)
+    pattern: /^(https?:\/\/ichef\.bbci\.co\.uk\/images\/ic\/)\d+x\d+\//,
+    sizes: [
+      '240x135',
+      '480x270',
+      '640x360',
+      '976x549',
+      '1280x720',
+      '1536x864',
+      '1920x1080',
+    ],
+  },
+]
 
 export function resizeImageUrl(url: string, width: number): string {
-  const snapped =
-    BBC_WIDTHS.find((candidate) => candidate >= width) ??
-    BBC_WIDTHS[BBC_WIDTHS.length - 1]
-  return url.replace(BBC_IMAGE_WIDTH, `$1${snapped}/`)
+  const shape = BBC_IMAGE_SHAPES.find(({ pattern }) => pattern.test(url))
+  if (!shape) return url
+  const { pattern, sizes } = shape
+  const size =
+    sizes.find((candidate) => parseInt(candidate, 10) >= width) ??
+    sizes[sizes.length - 1]
+  return url.replace(pattern, `$1${size}/`)
 }
 
 export function stripHtml(html: string): string {
