@@ -18,6 +18,7 @@ import {
 import { getNewsMode, type NewsMode } from './mode'
 import {
   getTitleSizeClass,
+  getRefreshIntervalMs,
   loadCache,
   resizeImageUrl,
   saveCache,
@@ -196,23 +197,26 @@ async function loadAndRender(
 ) {
   try {
     const entries = await fetchFeed(config)
-    if (entries.length === 0) {
-      showError(els)
+    if (entries.length > 0) {
+      saveCache(config.rssUrl, entries)
+      render(els, mode, entries)
+      showBody(els)
       return
     }
-    saveCache(entries)
-    render(els, mode, entries)
-    showBody(els)
+    // An empty feed is usually a hiccup at the source; keep showing the last
+    // stories rather than blanking the screen
+    console.warn('RSS feed returned no entries')
   } catch (err) {
     console.error('RSS fetch failed:', err)
-    const cached = loadCache()
-    if (cached.length === 0) {
-      showError(els)
-      return
-    }
-    render(els, mode, cached)
-    showBody(els)
   }
+
+  const cached = loadCache(config.rssUrl)
+  if (cached.length === 0) {
+    showError(els)
+    return
+  }
+  render(els, mode, cached)
+  showBody(els)
 }
 
 function updateDate(els: NewsElements, config: FeedConfig) {
@@ -257,8 +261,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     locale: await getLocale(),
     timezone: await getTimeZone(),
   }
-  const cacheInterval =
-    getSettingWithDefault<number>('cache_interval', 1800) * 1000
+  const cacheInterval = getRefreshIntervalMs(
+    getSettingWithDefault<number>('cache_interval', 1800),
+  )
 
   updateDate(els, config)
   setInterval(() => updateDate(els, config), DATE_UPDATE_INTERVAL_MS)

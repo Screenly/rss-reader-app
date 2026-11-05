@@ -1,5 +1,7 @@
 import { describe, test, expect, beforeEach } from 'bun:test'
 import {
+  CACHE_MAX_AGE_MS,
+  getRefreshIntervalMs,
   getTitleSizeClass,
   loadCache,
   resizeImageUrl,
@@ -10,14 +12,30 @@ import type { RssEntry } from './utils'
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
+  let quota = Infinity
   return {
     getItem: (key: string) => store[key] ?? null,
     setItem: (key: string, value: string) => {
+      if (!(key in store) && Object.keys(store).length >= quota) {
+        throw new DOMException('quota exceeded', 'QuotaExceededError')
+      }
       store[key] = value
+    },
+    setQuota: (keys: number) => {
+      quota = keys
+    },
+    removeItem: (key: string) => {
+      delete store[key]
+    },
+    key: (index: number) => Object.keys(store)[index] ?? null,
+    get length() {
+      return Object.keys(store).length
     },
     clear: () => {
       store = {}
+      quota = Infinity
     },
+    keys: () => Object.keys(store),
   }
 })()
 
@@ -58,29 +76,142 @@ describe('stripHtml', () => {
   })
 })
 
+const BBC = 'http://feeds.bbci.co.uk/news/rss.xml'
+const NPR = 'https://feeds.npr.org/1004/rss.xml'
+const NOW = 1_800_000_000_000
+
 describe('loadCache / saveCache', () => {
   beforeEach(() => {
     localStorageMock.clear()
   })
 
   test('returns empty array when cache is empty', () => {
-    expect(loadCache()).toEqual([])
+    expect(loadCache(BBC, NOW)).toEqual([])
   })
 
-  test('returns saved entries', () => {
-    saveCache(ENTRIES)
-    expect(loadCache()).toEqual(ENTRIES)
+  test('returns saved entries for the same feed', () => {
+    saveCache(BBC, ENTRIES, NOW)
+    expect(loadCache(BBC, NOW)).toEqual(ENTRIES)
   })
 
-  test('overwrites previous cache', () => {
-    saveCache(ENTRIES)
-    saveCache([ENTRIES[0]])
-    expect(loadCache()).toEqual([ENTRIES[0]])
+  test('overwrites previous cache for the same feed', () => {
+    saveCache(BBC, ENTRIES, NOW)
+    saveCache(BBC, [ENTRIES[0]], NOW)
+    expect(loadCache(BBC, NOW)).toEqual([ENTRIES[0]])
+  })
+
+  test("never returns another feed's stories", () => {
+    // e.g. rss_url changed and the first fetch of the new feed failed
+    saveCache(BBC, ENTRIES, NOW)
+    expect(loadCache(NPR, NOW)).toEqual([])
+  })
+
+  test('keeps separate caches per feed', () => {
+    saveCache(BBC, ENTRIES, NOW)
+    saveCache(NPR, [ENTRIES[1]], NOW)
+    expect(loadCache(BBC, NOW)).toEqual(ENTRIES)
+    expect(loadCache(NPR, NOW)).toEqual([ENTRIES[1]])
+  })
+
+  test('expires after CACHE_MAX_AGE_MS', () => {
+    saveCache(BBC, ENTRIES, NOW)
+    expect(loadCache(BBC, NOW + CACHE_MAX_AGE_MS)).toEqual(ENTRIES)
+    expect(loadCache(BBC, NOW + CACHE_MAX_AGE_MS + 1)).toEqual([])
+  })
+
+  test('ignores the legacy shared cache and removes it on save', () => {
+    localStorage.setItem(
+      'rssStore',
+      JSON.stringify({ entries: ENTRIES, timestamp: NOW }),
+    )
+    expect(loadCache(BBC, NOW)).toEqual([])
+    saveCache(BBC, [ENTRIES[0]], NOW)
+    expect(localStorageMock.keys()).not.toContain('rssStore')
+  })
+
+  test("prunes other feeds' expired caches on save, keeps fresh ones", () => {
+    saveCache(NPR, ENTRIES, NOW)
+    saveCache(BBC, ENTRIES, NOW + 1000)
+    expect(loadCache(NPR, NOW + 1000)).toEqual(ENTRIES)
+
+    saveCache(BBC, ENTRIES, NOW + CACHE_MAX_AGE_MS + 1)
+    expect(localStorageMock.keys()).toEqual([`rssStore:${BBC}`])
+  })
+})
+
+describe('cache recovery and validation', () => {
+  beforeEach(() => {
+    localStorageMock.clear()
+  })
+
+  test('recovers when storage is full of expired caches', () => {
+    saveCache(NPR, ENTRIES, NOW)
+    localStorageMock.setQuota(1)
+    saveCache(BBC, ENTRIES, NOW + CACHE_MAX_AGE_MS + 1)
+    expect(loadCache(BBC, NOW + CACHE_MAX_AGE_MS + 1)).toEqual(ENTRIES)
+  })
+
+  test('treats a cache saved in the future as stale', () => {
+    // e.g. saved while the player's clock was ahead, before it synced
+    saveCache(BBC, ENTRIES, NOW + 60_000)
+    expect(loadCache(BBC, NOW)).toEqual([])
+  })
+
+  test('rejects a cache with any malformed entry', () => {
+    const store = (entries: unknown) =>
+      localStorage.setItem(
+        `rssStore:${BBC}`,
+        JSON.stringify({ feedUrl: BBC, timestamp: NOW, entries }),
+      )
+    store([null])
+    expect(loadCache(BBC, NOW)).toEqual([])
+    store([ENTRIES[0], { content: 'no title' }])
+    expect(loadCache(BBC, NOW)).toEqual([])
+    store(['just a string'])
+    expect(loadCache(BBC, NOW)).toEqual([])
+  })
+
+  test('fills in missing optional fields of a cached entry', () => {
+    localStorage.setItem(
+      `rssStore:${BBC}`,
+      JSON.stringify({
+        feedUrl: BBC,
+        timestamp: NOW,
+        entries: [{ title: 'T' }],
+      }),
+    )
+    expect(loadCache(BBC, NOW)).toEqual([
+      { title: 'T', content: '', formattedDate: '', imageUrl: '', source: '' },
+    ])
   })
 
   test('returns empty array for malformed cache', () => {
-    localStorage.setItem('rssStore', 'not-json')
-    expect(loadCache()).toEqual([])
+    localStorage.setItem(`rssStore:${BBC}`, 'not-json')
+    expect(loadCache(BBC, NOW)).toEqual([])
+    localStorage.setItem(`rssStore:${BBC}`, JSON.stringify({ feedUrl: BBC }))
+    expect(loadCache(BBC, NOW)).toEqual([])
+    localStorage.setItem(`rssStore:${BBC}`, 'null')
+    expect(loadCache(BBC, NOW)).toEqual([])
+  })
+})
+
+describe('getRefreshIntervalMs', () => {
+  test('uses a normal value as is', () => {
+    expect(getRefreshIntervalMs(1800)).toBe(1_800_000)
+    expect(getRefreshIntervalMs(60)).toBe(60_000)
+  })
+
+  test('raises values that would refetch in a tight loop', () => {
+    expect(getRefreshIntervalMs(0)).toBe(60_000)
+    expect(getRefreshIntervalMs(-5)).toBe(60_000)
+    expect(getRefreshIntervalMs(1)).toBe(60_000)
+    expect(getRefreshIntervalMs(NaN)).toBe(60_000)
+  })
+
+  test('caps values that would overflow setInterval', () => {
+    // setInterval fires immediately for delays above 2^31 - 1 ms (~24.8 days)
+    expect(getRefreshIntervalMs(Infinity)).toBe(86_400_000)
+    expect(getRefreshIntervalMs(10_000_000)).toBe(86_400_000)
   })
 })
 
