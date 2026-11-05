@@ -12,10 +12,17 @@ import type { RssEntry } from './utils'
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
+  let quota = Infinity
   return {
     getItem: (key: string) => store[key] ?? null,
     setItem: (key: string, value: string) => {
+      if (!(key in store) && Object.keys(store).length >= quota) {
+        throw new DOMException('quota exceeded', 'QuotaExceededError')
+      }
       store[key] = value
+    },
+    setQuota: (keys: number) => {
+      quota = keys
     },
     removeItem: (key: string) => {
       delete store[key]
@@ -26,6 +33,7 @@ const localStorageMock = (() => {
     },
     clear: () => {
       store = {}
+      quota = Infinity
     },
     keys: () => Object.keys(store),
   }
@@ -68,11 +76,11 @@ describe('stripHtml', () => {
   })
 })
 
-describe('loadCache / saveCache', () => {
-  const BBC = 'http://feeds.bbci.co.uk/news/rss.xml'
-  const NPR = 'https://feeds.npr.org/1004/rss.xml'
-  const NOW = 1_800_000_000_000
+const BBC = 'http://feeds.bbci.co.uk/news/rss.xml'
+const NPR = 'https://feeds.npr.org/1004/rss.xml'
+const NOW = 1_800_000_000_000
 
+describe('loadCache / saveCache', () => {
   beforeEach(() => {
     localStorageMock.clear()
   })
@@ -128,6 +136,47 @@ describe('loadCache / saveCache', () => {
 
     saveCache(BBC, ENTRIES, NOW + CACHE_MAX_AGE_MS + 1)
     expect(localStorageMock.keys()).toEqual([`rssStore:${BBC}`])
+  })
+})
+
+describe('cache recovery and validation', () => {
+  beforeEach(() => {
+    localStorageMock.clear()
+  })
+
+  test('recovers when storage is full of expired caches', () => {
+    saveCache(NPR, ENTRIES, NOW)
+    localStorageMock.setQuota(1)
+    saveCache(BBC, ENTRIES, NOW + CACHE_MAX_AGE_MS + 1)
+    expect(loadCache(BBC, NOW + CACHE_MAX_AGE_MS + 1)).toEqual(ENTRIES)
+  })
+
+  test('rejects a cache with any malformed entry', () => {
+    const store = (entries: unknown) =>
+      localStorage.setItem(
+        `rssStore:${BBC}`,
+        JSON.stringify({ feedUrl: BBC, timestamp: NOW, entries }),
+      )
+    store([null])
+    expect(loadCache(BBC, NOW)).toEqual([])
+    store([ENTRIES[0], { content: 'no title' }])
+    expect(loadCache(BBC, NOW)).toEqual([])
+    store(['just a string'])
+    expect(loadCache(BBC, NOW)).toEqual([])
+  })
+
+  test('fills in missing optional fields of a cached entry', () => {
+    localStorage.setItem(
+      `rssStore:${BBC}`,
+      JSON.stringify({
+        feedUrl: BBC,
+        timestamp: NOW,
+        entries: [{ title: 'T' }],
+      }),
+    )
+    expect(loadCache(BBC, NOW)).toEqual([
+      { title: 'T', content: '', formattedDate: '', imageUrl: '', source: '' },
+    ])
   })
 
   test('returns empty array for malformed cache', () => {

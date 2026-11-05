@@ -107,8 +107,26 @@ function isFresh(cache: Partial<AppCache>, now: number): boolean {
   )
 }
 
+// Storage can hold anything (an older build's format, a partial write), and
+// rendering trusts these fields, so check every entry. Optional text fields
+// default to empty; an entry without a title is unusable.
+function toEntry(value: unknown): RssEntry | null {
+  if (!value || typeof value !== 'object') return null
+  const v = value as Record<string, unknown>
+  if (typeof v.title !== 'string') return null
+  const text = (field: unknown) => (typeof field === 'string' ? field : '')
+  return {
+    title: v.title,
+    content: text(v.content),
+    formattedDate: text(v.formattedDate),
+    imageUrl: text(v.imageUrl),
+    source: text(v.source),
+  }
+}
+
 // Returns the cached entries for this feed, or [] if there are none, they
-// belong to another feed, or they are older than CACHE_MAX_AGE_MS
+// belong to another feed, they are older than CACHE_MAX_AGE_MS, or any of
+// them is malformed
 export function loadCache(feedUrl: string, now = Date.now()): RssEntry[] {
   try {
     const cache = readCache(cacheKey(feedUrl))
@@ -120,7 +138,10 @@ export function loadCache(feedUrl: string, now = Date.now()): RssEntry[] {
     ) {
       return []
     }
-    return cache.entries
+    const entries = cache.entries.map(toEntry)
+    return entries.every((entry) => entry !== null)
+      ? (entries as RssEntry[])
+      : []
   } catch {
     return []
   }
@@ -132,9 +153,11 @@ export function saveCache(
   now = Date.now(),
 ) {
   try {
+    // Prune first: if storage is full of expired caches, the write below
+    // would otherwise fail every time and the cache would never recover
+    pruneCaches(feedUrl, now)
     const data: AppCache = { feedUrl, entries, timestamp: now }
     localStorage.setItem(cacheKey(feedUrl), JSON.stringify(data))
-    pruneCaches(feedUrl, now)
   } catch (err) {
     console.warn('Failed to save cache:', err)
   }
