@@ -100,11 +100,13 @@ function readCache(key: string): Partial<AppCache> | null {
   }
 }
 
+// A cache saved in the future means the clock was wrong when it was saved
+// (players often boot with a bad date until they sync), so its real age is
+// unknown; treat it as stale rather than letting it outlive the 24 hours
 function isFresh(cache: Partial<AppCache>, now: number): boolean {
-  return (
-    typeof cache.timestamp === 'number' &&
-    now - cache.timestamp <= CACHE_MAX_AGE_MS
-  )
+  if (typeof cache.timestamp !== 'number') return false
+  const age = now - cache.timestamp
+  return age >= 0 && age <= CACHE_MAX_AGE_MS
 }
 
 // Storage can hold anything (an older build's format, a partial write), and

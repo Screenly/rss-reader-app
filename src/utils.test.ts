@@ -151,6 +151,12 @@ describe('cache recovery and validation', () => {
     expect(loadCache(BBC, NOW + CACHE_MAX_AGE_MS + 1)).toEqual(ENTRIES)
   })
 
+  test('treats a cache saved in the future as stale', () => {
+    // e.g. saved while the player's clock was ahead, before it synced
+    saveCache(BBC, ENTRIES, NOW + 60_000)
+    expect(loadCache(BBC, NOW)).toEqual([])
+  })
+
   test('rejects a cache with any malformed entry', () => {
     const store = (entries: unknown) =>
       localStorage.setItem(
