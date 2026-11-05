@@ -21,20 +21,35 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: read
+
 run-name: Initializing ${{ inputs.edge_app_name }} in ${{ inputs.environment }}
 
 jobs:
-  initialize:
-    name: Initializing ${{ inputs.edge_app_name }} in ${{ inputs.environment }}
+  # The reusable workflow builds whatever ref this run was started from, so
+  # refuse anything but the default branch rather than initializing an app
+  # (possibly in production) from unreleased code. This fails loudly instead
+  # of skipping, so a run from the wrong branch can't look like a success.
+  verify-ref:
+    name: Verify default branch
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
     steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: main
-      - uses: Screenly/edge-apps-actions/initialize@v1
-        with:
-          screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN }}
-          edge_app_name: ${{ inputs.edge_app_name }}
-          edge_app_title: ${{ inputs.edge_app_title }}
-          environment: ${{ inputs.environment }}
+      - name: Require the default branch
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/$DEFAULT_BRANCH" ]; then
+            echo "::error::Initialize Edge App must be run from $DEFAULT_BRANCH, not $GITHUB_REF_NAME."
+            exit 1
+          fi
+
+  initialize:
+    needs: verify-ref
+    uses: Screenly/edge-apps-actions/.github/workflows/initialize.yml@v26.10.2
+    with:
+      environment: ${{ inputs.environment }}
+      edge_app_name: ${{ inputs.edge_app_name }}
+      edge_app_title: ${{ inputs.edge_app_title }}
+    secrets:
+      SCREENLY_API_TOKEN: ${{ secrets.SCREENLY_API_TOKEN }}

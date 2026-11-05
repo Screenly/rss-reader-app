@@ -2,37 +2,21 @@
 name: Update Edge App
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
+      - master
     tags:
-      - 'v*'
+      - 'v[0-9]*'
 
-run-name: Updating RSS Reader in ${{ startsWith(github.ref, 'refs/tags/v') && 'production' || 'stage' }}
+permissions:
+  contents: read
+
+run-name: Updating RSS Reader in ${{ (github.event_name == 'push' && !github.event.deleted && startsWith(github.ref, 'refs/tags/v')) && 'production' || 'stage' }}
 
 jobs:
-  deploy-stage:
-    name: Updating RSS Reader in stage
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    environment: stage
-    steps:
-      - uses: actions/checkout@v7
-      - uses: Screenly/edge-apps-actions/update@v1
-        with:
-          screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN }}
-          environment: stage
-          delete_missing_settings: 'true'
-
-  deploy-production:
-    name: Updating RSS Reader in production
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    environment: production
-    steps:
-      - uses: actions/checkout@v7
-      - uses: Screenly/edge-apps-actions/update@v1
-        with:
-          screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN }}
-          environment: production
-          delete_missing_settings: 'true'
+  update:
+    uses: Screenly/edge-apps-actions/.github/workflows/update.yml@v26.10.2
+    secrets:
+      SCREENLY_API_TOKEN: ${{ secrets.SCREENLY_API_TOKEN }}

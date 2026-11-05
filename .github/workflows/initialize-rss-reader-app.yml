@@ -1,11 +1,15 @@
 ---
+# Creates a feed app (e.g. BBC News) in one environment. Add the app to
+# deployed-apps.yml first; this reads its name, description, icon and feed
+# from there, then runs the shared edge-apps-actions initialize. Afterwards,
+# put the new id in deployed-apps.yml so Update RSS Reader Apps deploys it.
 name: Initialize Custom RSS Reader App
 
 on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to initialize in (stage or production)'
+        description: 'Environment to initialize in'
         required: true
         default: 'stage'
         type: choice
@@ -13,104 +17,78 @@ on:
           - stage
           - production
 
-      app_name:
-        description: 'App Name (used for instance title)'
+      app_key:
+        description: "App key in deployed-apps.yml (e.g. 'bbc-news')"
         required: true
         type: string
-        default: 'BBC News'
 
-      app_description:
-        description: 'App Description (used in manifest description)'
-        required: true
-        type: string
-        default: 'Latest news from BBC World Service'
+permissions:
+  contents: read
 
-      rss_title:
-        description: 'RSS Title (title to display in the app)'
-        required: true
-        type: string
-        default: 'BBC News'
-
-      icon_url:
-        description: 'Icon URL (publicly accessible icon image)'
-        required: true
-        type: string
-        default: 'https://playground.srly.io/edge-apps/rss-reader/static/img/icon.svg'
-
-      rss_url:
-        description: 'RSS Feed URL'
-        required: true
-        type: string
-        default: 'http://feeds.bbci.co.uk/news/rss.xml'
-
-run-name: Initialize RSS Reader - ${{ inputs.app_name }} in ${{ inputs.environment }}
+run-name: Initialize RSS Reader - ${{ inputs.app_key }} in ${{ inputs.environment }}
 
 jobs:
-  deploy:
-    name: Initializing ${{ inputs.app_name }} in ${{ inputs.environment }}
+  initialize:
+    name: Initialize ${{ inputs.app_key }} in ${{ inputs.environment }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    env:
-      API_BASE_URL: ${{ inputs.environment == 'stage' && 'https://api.screenlyappstage.com' || 'https://api.screenlyapp.com' }}
-      APP_NAME: ${{ inputs.app_name }}
-      SCREENLY_API_TOKEN: ${{ secrets.SCREENLY_API_TOKEN }}
-      MANIFEST_FILE_NAME: ${{ inputs.environment == 'stage' && 'screenly_qc.yml' || 'screenly.yml' }}
+    concurrency:
+      group: feed-app-${{ inputs.environment }}-${{ inputs.app_key }}
+      cancel-in-progress: false
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v7
-        with:
-          ref: main
-
-      - name: Setup yq
-        uses: ./.github/actions/setup-yq
-
-      - name: Update manifest file with custom values
+      # The app is built from the ref this run starts on, so refuse anything
+      # but the default branch rather than creating it from unreleased code
+      - name: Require the default branch
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          yq -i 'del(.id)' "$MANIFEST_FILE_NAME"
-          yq -i '.description = "${{ inputs.app_description }}"' "$MANIFEST_FILE_NAME"
-          yq -i '.icon = "${{ inputs.icon_url }}"' "$MANIFEST_FILE_NAME"
-          yq -i '.settings.rss_url.default_value = "${{ inputs.rss_url }}"' "$MANIFEST_FILE_NAME"
-          yq -i '.settings.rss_title.default_value = "${{ inputs.rss_title }}"' "$MANIFEST_FILE_NAME"
+          if [ "$GITHUB_REF" != "refs/heads/$DEFAULT_BRANCH" ]; then
+            echo "::error::Run this from $DEFAULT_BRANCH, not $GITHUB_REF_NAME."
+            exit 1
+          fi
 
-      - name: Show updated manifest
-        run: cat "$MANIFEST_FILE_NAME"
+      - uses: actions/checkout@v7
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Create Edge App
-        uses: screenly/cli@master
+      - name: Apply ${{ inputs.app_key }} config
+        id: config
+        uses: ./.github/actions/apply-feed-app
         with:
-          screenly_api_token: ${{ env.SCREENLY_API_TOKEN }}
-          cli_commands: edge-app create --name="${{ env.APP_NAME }}" --in-place
+          app_key: ${{ inputs.app_key }}
+          environment: ${{ inputs.environment }}
 
-      - name: Build
-        run: bun run build
-
-      - name: Deploy Edge App
-        uses: screenly/cli@master
+      # Refuses to run if deployed-apps.yml already has an id for this
+      # environment, or if an app with this name already exists
+      - name: Initialize ${{ inputs.app_key }}
+        uses: Screenly/edge-apps-actions/initialize@v26.10.2
         with:
-          screenly_api_token: ${{ env.SCREENLY_API_TOKEN }}
-          cli_commands: edge-app deploy --path="./dist"
+          screenly_api_token: ${{ secrets.SCREENLY_API_TOKEN }}
+          environment: ${{ inputs.environment }}
+          edge_app_name: ${{ steps.config.outputs.app_name }}
+          edge_app_title: ${{ steps.config.outputs.app_name }}
+          edge_app_id: ${{ steps.config.outputs.edge_app_id }}
 
-      - name: Log manifest after creation
-        run: cat "dist/$MANIFEST_FILE_NAME"
-
-      - name: Create Instance
-        uses: screenly/cli@master
-        with:
-          screenly_api_token: ${{ env.SCREENLY_API_TOKEN }}
-          cli_commands: edge-app instance create --name="${{ inputs.app_name }}"
-
-      - name: Update Instance
-        uses: screenly/cli@master
-        with:
-          screenly_api_token: ${{ env.SCREENLY_API_TOKEN }}
-          cli_commands: edge-app instance update
-
-      - name: Log instance.yml
-        run: cat instance.yml
+      # The shared action's summary says to set a repo variable; feed apps
+      # keep their ids in deployed-apps.yml instead. Runs even if a later
+      # step failed, as long as the app was created.
+      - name: Report where the id goes
+        if: always()
+        env:
+          APP_KEY: ${{ inputs.app_key }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          ID="$(grep -E '^id:[[:space:]]*' screenly.yml | head -1 | awk '{print $2}' | tr -d "\"'" || true)"
+          [ -n "$ID" ] || exit 0
+          echo "::notice::Feed app id: set apps.$APP_KEY.ids.$ENVIRONMENT to $ID in deployed-apps.yml (not a repo variable)."
+          {
+            echo "## Feed app id"
+            echo ""
+            echo "This is a feed app, so ignore the note above about repository variables. Set this in \`deployed-apps.yml\` and merge it:"
+            echo ""
+            echo '```yaml'
+            echo "apps:"
+            echo "  $APP_KEY:"
+            echo "    ids:"
+            echo "      $ENVIRONMENT: '$ID'"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
