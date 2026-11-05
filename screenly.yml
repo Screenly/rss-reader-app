@@ -21,7 +21,9 @@ settings:
     title: Cache Interval
     optional: false
     help_text: |
-      Specify the interval (in seconds) used to periodically cache feeds.
+      How often, in seconds, to refresh the feed (60 to 86400; values
+      outside that range are clamped). If a refresh fails, the last stories
+      from this feed stay on screen for up to 24 hours.
   display_errors:
     type: string
     default_value: 'false'
