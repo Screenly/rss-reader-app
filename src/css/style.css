@@ -105,10 +105,14 @@ auto-scaler {
   flex-shrink: 0;
 }
 
+/* Sized by the image's own aspect ratio inside a bounding box, so the whole
+   picture shows instead of a wide strip cropped out of its middle */
 .news-hero-image {
-  width: 100%;
-  height: 15rem;
-  object-fit: cover;
+  align-self: flex-start;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 15rem;
   border-radius: 1.25rem;
   border: 0.0625rem solid var(--news-rule);
 }
@@ -298,7 +302,7 @@ body.mode-list .news-item-date {
   }
 
   .news-hero-image {
-    height: 12rem;
+    max-height: 12rem;
   }
 
   .news-hero-excerpt {
