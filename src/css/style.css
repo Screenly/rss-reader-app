@@ -107,16 +107,24 @@ auto-scaler {
 
 /* Always the same height, with the width following the image's own aspect
    ratio, so the whole picture shows instead of a wide strip cropped out of its
-   middle. Small images scale up to it; ones wider than the column fit inside
-   it rather than being cropped. */
+   middle. Small images scale up to it. Until the image loads it holds a 16:9
+   box, the usual news shape, rather than collapsing to a sliver. */
 .news-hero-image {
   align-self: flex-start;
   width: auto;
   height: 15rem;
   max-width: 100%;
+  aspect-ratio: auto 16 / 9;
   object-fit: contain;
   border-radius: 1.25rem;
   border: 0.0625rem solid var(--news-rule);
+}
+
+/* Too wide to fit the column at full height: span the column and go shorter,
+   so the frame wraps the picture instead of empty bands above and below it */
+.news-hero-image.is-wide {
+  width: 100%;
+  height: auto;
 }
 
 .news-hero-image.is-hidden,
@@ -303,7 +311,7 @@ body.mode-list .news-item-date {
     padding-left: 3rem;
   }
 
-  .news-hero-image {
+  .news-hero-image:not(.is-wide) {
     height: 12rem;
   }
 

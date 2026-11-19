@@ -144,11 +144,23 @@ function createRow(entry: RssEntry, withImage: boolean): HTMLLIElement {
   return item
 }
 
+// At full height the image would overflow the column, so it is shown
+// narrower than its own aspect ratio; the stylesheet then lets it go shorter
+function fitWideHeroImage(image: HTMLImageElement) {
+  image.classList.remove('is-wide')
+  const naturalRatio = image.naturalWidth / image.naturalHeight
+  const shownRatio = image.clientWidth / image.clientHeight
+  image.classList.toggle('is-wide', naturalRatio > shownRatio * 1.01)
+}
+
 function renderHero(els: NewsElements, entry: RssEntry) {
-  if (els.heroImage) {
-    els.heroImage.classList.toggle('is-hidden', !entry.imageUrl)
+  const image = els.heroImage
+  if (image) {
+    image.classList.remove('is-wide')
+    image.classList.toggle('is-hidden', !entry.imageUrl)
     if (entry.imageUrl) {
-      setFeedImage(els.heroImage, entry.imageUrl, heroImageWidth())
+      image.onload = () => fitWideHeroImage(image)
+      setFeedImage(image, entry.imageUrl, heroImageWidth())
     }
   }
   if (els.heroDate) {
